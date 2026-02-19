@@ -275,7 +275,11 @@ exports.updateAdminProfile = async (req, res) => {
 };
 
 exports.sendOrderOTP = async (req, res) => {
-  const { phone } = req.body;
+  let { phone } = req.body;
+  
+  // Robustness: Trim phone
+  phone = phone ? phone.toString().trim() : "";
+
   try {
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     await OTP.findOneAndDelete({ phone });
@@ -300,14 +304,38 @@ exports.sendOrderOTP = async (req, res) => {
 };
 
 exports.verifyOrderOTP = async (req, res) => {
-  const { phone, otp } = req.body;
+  let { phone, otp } = req.body;
+  
+  // Robustness: Trim inputs
+  phone = phone ? phone.toString().trim() : "";
+  otp = otp ? otp.toString().trim() : "";
+
+  console.log(`[DEBUG-OTP] Verifying: Phone='${phone}', OTP='${otp}'`);
+  
   try {
-    const otpRecord = await OTP.findOne({ phone, otp });
-    if (!otpRecord)
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    // Try exact match first
+    let otpRecord = await OTP.findOne({ phone, otp });
+    
+    // Fallback: Check if phone matches partially (e.g. without +91 or with it)
+    if (!otpRecord) {
+        // Try searching by OTP only to see if phone is mismatched
+        const otpOnly = await OTP.findOne({ otp });
+        if (otpOnly) {
+             console.log(`[DEBUG-OTP] Mismatch Found! DB Phone: '${otpOnly.phone}' vs Req Phone: '${phone}'`);
+        } else {
+             console.log(`[DEBUG-OTP] No record found for OTP: '${otp}'`);
+        }
+        
+        return res.status(400).json({ 
+            success: false, 
+            message: "Invalid Verification Code" 
+        });
+    }
+
     await OTP.deleteOne({ _id: otpRecord._id });
     res.json({ success: true, message: "Verification success" });
   } catch (error) {
+    console.error(`[DEBUG-OTP] Error:`, error);
     res.status(500).json({ message: error.message });
   }
 };

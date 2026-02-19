@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import {
   Printer,
@@ -13,7 +13,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { selectUser, logout, selectViewMode, toggleViewMode } from "../../redux/slices/authSlice";
+import { selectUser, logout, selectViewMode, toggleViewMode, setViewMode } from "../../redux/slices/authSlice";
 import { motion } from "framer-motion";
 
 export default function Navbar() {
@@ -23,13 +23,25 @@ export default function Navbar() {
   const viewMode = useSelector(selectViewMode);
   const navigate = useNavigate();
 
-  const handleToggleView = () => {
-    dispatch(toggleViewMode());
-    // If switching TO admin, go to admin dashboard
-    if (viewMode === "user") {
-        navigate("/admin");
+  /* FIX: Ensure viewMode is 'user' when Navbar (public UI) is mounted. 
+     This prevents the "double click" issue where reloading as admin puts you in 'admin' viewMode.
+     We use a timeout to avoid a race condition where switching TO admin triggers this effect 
+     and reverts the state before navigation unmounts the component. */
+  useEffect(() => {
+    let timer;
+    if (viewMode === 'admin') {
+      timer = setTimeout(() => {
+         dispatch(setViewMode('user'));
+      }, 100);
     }
-    // If switching TO user, we remain on the current public page (or go home if we were on an admin page, but Navbar is only on public pages)
+    return () => clearTimeout(timer);
+  }, [viewMode, dispatch]);
+
+  const handleToggleView = () => {
+    // Always switch to admin and navigate
+    // The useEffect cleanup will ensure we don't revert to user if we unmount
+    dispatch(setViewMode("admin"));
+    navigate("/admin");
   };
 
   const handleLogout = () => {

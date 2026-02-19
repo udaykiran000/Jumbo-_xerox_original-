@@ -191,8 +191,14 @@ const Checkout = () => {
   // --- 3. MOCK PAYMENT STATE ---
   const [showMockPayment, setShowMockPayment] = useState(false);
   const [mockOrderData, setMockOrderData] = useState(null);
+  
+  // Anti-Double-Click State
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
 
   const proceedToOrderCreation = async () => {
+    if (isPaymentProcessing) return; // Prevention
+    setIsPaymentProcessing(true);
+    
     try {
       const payload = {
         files: (state?.fileKeys || []).map((k) => ({
@@ -228,6 +234,8 @@ const Checkout = () => {
       }
     } catch (e) {
       toast.error("Order process failed");
+    } finally {
+        setIsPaymentProcessing(false);
     }
   };
 
@@ -476,12 +484,15 @@ const Checkout = () => {
                   </div>
                 </div>
                 <button
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isPaymentProcessing}
                   onClick={handlePlaceOrderClick}
-                  className="w-full mt-12 py-7 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] font-black text-xl shadow-2xl shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-4 uppercase tracking-tighter"
+                  className="w-full mt-12 py-7 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] font-black text-xl shadow-2xl shadow-blue-600/30 transition-all active:scale-95 flex items-center justify-center gap-4 uppercase tracking-tighter disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? (
+                  {isSubmitting || isPaymentProcessing ? (
+                    <>
                     <Loader2 className="animate-spin" />
+                    <span>Processing...</span>
+                    </>
                   ) : (
                     <>
                       <ShieldCheck size={24} /> Checkout Now

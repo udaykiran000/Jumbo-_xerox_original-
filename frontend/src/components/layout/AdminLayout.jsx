@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { useDispatch, useSelector } from "react-redux";
 import { fetchDashboardStats, selectNotifications } from "../../redux/slices/dashboardSlice";
-import { selectUser, logout, selectViewMode, toggleViewMode } from "../../redux/slices/authSlice";
+import { selectUser, logout, selectViewMode, setViewMode } from "../../redux/slices/authSlice";
 
 const AdminLayout = () => {
   const dispatch = useDispatch();
@@ -46,7 +46,7 @@ const AdminLayout = () => {
   }, [viewMode, navigate]);
 
   const handleToggleView = () => {
-      dispatch(toggleViewMode());
+      dispatch(setViewMode('user'));
   };
 
   // Debugging route logs

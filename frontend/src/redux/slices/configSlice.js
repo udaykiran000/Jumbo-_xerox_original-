@@ -18,7 +18,7 @@ export const fetchConfig = createAsyncThunk(
 
 const initialState = {
   otpTestMode: false,
-  paymentTestMode: false,
+  paymentTestMode: true, // Safer default (Mock Mode)
   shippingMode: "real",
   loading: true,
   error: null,

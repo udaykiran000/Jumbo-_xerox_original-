@@ -26,7 +26,9 @@ export const displayRazorpay = async (orderData, user, navigate) => {
     currency: orderData.razorpayOrder.currency,
     name: "Jumbo Xerox",
     description: `Order for ${orderData.order.serviceType}`,
-    image: "/logo.png", // logo path 
+    // Fix: Use a public URL or comment out image for localhost to avoid CORS/404
+    // image: "/logo.png", 
+    image: "https://cdn.razorpay.com/logos/GhRQcyean79PqE_medium.png", // Example legitimate logo to stop errors
     order_id: orderData.razorpayOrder.id,
     handler: async (response) => {
       try {
