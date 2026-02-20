@@ -55,7 +55,7 @@ const ServiceSummary = ({
                     <span className="text-[9px] font-bold">PDF</span>
                   </div>
                   <span className="text-xs font-bold text-slate-700 truncate flex-1">
-                    {file.name || file} 
+                    {file.name || (file.file && file.file.name) || "Untitled File"} 
                   </span>
                   <CheckCircle2 size={12} className="text-green-500" />
                 </div>

@@ -174,29 +174,29 @@ export default function UserDashboard() {
         {/* 1. HEADER */}
         <motion.header
           variants={fadeInUp}
-          className={`${theme === "dark" ? "bg-white/5 border-white/10" : "bg-white border-slate-200"} backdrop-blur-xl p-10 rounded-[3rem] flex flex-col md:flex-row justify-between items-center border shadow-2xl gap-6`}
+          className={`${theme === "dark" ? "bg-white/5 border-white/10" : "bg-white border-slate-200"} backdrop-blur-xl p-8 rounded-3xl flex flex-col md:flex-row justify-between items-center border shadow-xl gap-6`}
         >
           <div className="flex items-center gap-6">
             <motion.div 
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              className="w-20 h-20 bg-blue-600 text-white rounded-[2rem] flex items-center justify-center text-3xl font-black shadow-lg uppercase"
+              whileHover={{ scale: 1.05 }}
+              className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-2xl font-bold shadow-lg"
             >
               {userData.name?.charAt(0)}
             </motion.div>
             <div>
-              <h1 className="text-3xl font-black tracking-tight italic">
-                Hello, {userData.name}! 👋
+              <h1 className="text-2xl font-bold text-slate-900 group-dark:text-white">
+                Hello, {userData.name}!
               </h1>
-              <p className="text-slate-500 font-medium">{userData.email}</p>
+              <p className="text-slate-500 text-sm font-medium">{userData.email}</p>
             </div>
           </div>
           <motion.button
-            whileHover={{ scale: 1.1, rotate: 180 }}
-            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={toggleTheme}
-            className="p-4 rounded-2xl bg-slate-500/10 hover:bg-slate-500/20 transition-all border border-slate-200/50"
+            className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all border border-slate-200/50"
           >
-            {theme === "light" ? <Moon size={24} /> : <Sun size={24} />}
+            {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
           </motion.button>
         </motion.header>
 
@@ -206,27 +206,27 @@ export default function UserDashboard() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           <StatCard
             label="Total Requests"
             value={stats.total}
             icon={<Package />}
-            color="text-blue-500"
+            color="text-blue-600"
             theme={theme}
           />
           <StatCard
             label="Unpaid Orders"
             value={stats.pending}
             icon={<RotateCcw />}
-            color="text-amber-500"
+            color="text-amber-600"
             theme={theme}
           />
           <StatCard
             label="Finalized"
             value={stats.completed}
-            icon={<CheckCircle />}
-            color="text-emerald-500"
+            icon={<CheckCircle2 />}
+            color="text-emerald-600"
             theme={theme}
           />
         </motion.div>
@@ -237,17 +237,17 @@ export default function UserDashboard() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className={`${theme === "dark" ? "bg-white/5 border-white/10" : "bg-white border-slate-200"} p-10 rounded-[3rem] border shadow-2xl`}
+          className={`${theme === "dark" ? "bg-white/5 border-white/10" : "bg-white border-slate-200"} p-8 rounded-3xl border shadow-xl`}
         >
-          <h2 className="text-2xl font-black mb-8 px-4 border-l-4 border-blue-600 uppercase tracking-tighter">
-            Your Printing History
+          <h2 className="text-xl font-bold mb-8 px-4 border-l-4 border-blue-600 uppercase tracking-tight">
+            Order Printing History
           </h2>
 
           {loading ? (
             <div className="py-24 flex flex-col items-center gap-4">
-              <Loader2 className="animate-spin text-blue-600" size={50} />
-              <p className="text-slate-500 font-black uppercase tracking-widest text-xs">
-                Syncing Pipeline...
+              <Loader2 className="animate-spin text-blue-600" size={40} />
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+                Syncing Dashboard...
               </p>
             </div>
           ) : orders.length === 0 ? (
@@ -261,14 +261,14 @@ export default function UserDashboard() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-separate border-spacing-y-4">
+                <table className="w-full text-left">
                   <thead>
-                    <tr className="text-slate-400 uppercase text-[11px] font-black tracking-[0.2em] px-4">
-                      <th className="pb-4 px-6">ID</th>
-                      <th className="pb-4 px-6">Service</th>
-                      <th className="pb-4 px-6">Financials</th>
-                      <th className="pb-4 px-6">Status</th>
-                      <th className="pb-4 px-6 text-right">Action</th>
+                    <tr className="text-slate-400 uppercase text-[10px] font-bold tracking-widest px-4 border-b border-slate-100">
+                      <th className="pb-4 px-6">Order ID</th>
+                      <th className="pb-4 px-6">Service Type</th>
+                      <th className="pb-4 px-6">Amount / Status</th>
+                      <th className="pb-4 px-6">Order Status</th>
+                      <th className="pb-4 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -280,30 +280,32 @@ export default function UserDashboard() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.9 }}
                           transition={{ delay: index * 0.05 }}
-                          className={`${theme === "dark" ? "bg-white/5" : "bg-slate-50"} hover:bg-blue-500/5 transition-all rounded-2xl`}
+                          className="border-b border-slate-50 hover:bg-slate-50/80 dark:hover:bg-white/5 transition-all"
                         >
-                          <td className="py-6 px-6 rounded-l-2xl font-mono text-xs font-bold text-blue-600 italic">
+                          <td className="py-5 px-6 font-mono text-xs font-bold text-blue-600">
                             #{order._id.slice(-6).toUpperCase()}
                           </td>
-                          <td className="py-6 px-6 font-black text-sm uppercase">
+                          <td className="py-5 px-6 font-bold text-sm text-slate-700">
                             {order.serviceType}
                           </td>
-                          <td className="py-6 px-6">
+                          <td className="py-5 px-6">
                             <div className="flex flex-col">
-                              <span className="font-black italic text-sm">
+                              <span className="font-bold text-sm text-slate-900">
                                 ₹{order.totalAmount}
                               </span>
                               <span
-                                className={`text-[9px] font-black uppercase tracking-widest ${order.paymentStatus === "Paid" ? "text-emerald-500" : "text-orange-500"}`}
+                                className={`text-[10px] font-bold uppercase tracking-wider ${order.paymentStatus === "Paid" ? "text-emerald-600" : "text-amber-600"}`}
                               >
                                 {order.paymentStatus}
                               </span>
                             </div>
                           </td>
-                          <td className="py-6 px-6 font-bold text-slate-500">
-                            {order.status}
+                          <td className="py-5 px-6">
+                            <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-bold text-slate-500 uppercase">
+                              {order.status}
+                            </span>
                           </td>
-                          <td className="py-6 px-6 rounded-r-2xl text-right">
+                          <td className="py-5 px-6 text-right">
                             <div className="flex items-center justify-end gap-3">
                               {/* LOGICAL CONNECTIVITY: PAY NOW BUTTON */}
                               {order.paymentStatus === "Pending" &&
@@ -357,15 +359,15 @@ export default function UserDashboard() {
 
               {/* PAGINATION */}
               {totalPages > 1 && (
-                <div className="mt-10 flex justify-center items-center gap-6 bg-slate-100/50 p-4 rounded-3xl w-fit mx-auto">
+                <div className="mt-10 flex justify-center items-center gap-4 bg-slate-100/50 p-3 rounded-2xl w-fit mx-auto border border-slate-200/50">
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                     disabled={currentPage === 1}
-                    className="p-3 rounded-xl bg-white shadow-sm border border-slate-200 disabled:opacity-30"
+                    className="p-2 rounded-xl bg-white shadow-sm border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
                   >
-                    <ChevronLeft />
+                    <ChevronLeft size={18} />
                   </button>
-                  <div className="font-black text-xs text-slate-500 uppercase tracking-widest">
+                  <div className="font-bold text-[11px] text-slate-500 uppercase tracking-widest px-2">
                     Page {currentPage} of {totalPages}
                   </div>
                   <button
@@ -373,9 +375,9 @@ export default function UserDashboard() {
                       setCurrentPage((p) => Math.min(p + 1, totalPages))
                     }
                     disabled={currentPage === totalPages}
-                    className="p-3 rounded-xl bg-white shadow-sm border border-slate-200 disabled:opacity-30"
+                    className="p-2 rounded-xl bg-white shadow-sm border border-slate-200 disabled:opacity-30 hover:bg-slate-50 transition-colors"
                   >
-                    <ChevronRight />
+                    <ChevronRight size={18} />
                   </button>
                 </div>
               )}
@@ -384,12 +386,12 @@ export default function UserDashboard() {
         </motion.div>
 
         {/* 4. BIG SERVICE CARDS */}
-        <div className="space-y-12">
+        <div className="space-y-12 pb-12 border-b border-slate-200">
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl font-black text-center tracking-tighter uppercase italic"
+            className="text-3xl font-bold text-center tracking-tight uppercase"
           >
             Order New Prints
           </motion.h2>
@@ -398,7 +400,7 @@ export default function UserDashboard() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-10"
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
           >
             <ServiceCard
               title="Quick Printouts"
@@ -424,7 +426,7 @@ export default function UserDashboard() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-10"
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6"
         >
           <NoteBox
             icon={<FiMapPin />}
@@ -457,58 +459,57 @@ export default function UserDashboard() {
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-full max-w-2xl rounded-[3rem] overflow-hidden shadow-2xl"
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl border border-slate-200"
             >
-              <div className="bg-blue-600 p-8 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                  <Package size={24} />
-                  <h2 className="text-xl font-black uppercase tracking-tight italic">
-                    Order Analysis
+                  <Package size={20} className="text-blue-400" />
+                  <h2 className="text-lg font-bold uppercase tracking-tight">
+                    Order Details
                   </h2>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="bg-white/20 p-2 rounded-xl hover:bg-white/40 transition-all"
+                  className="bg-white/10 p-2 rounded-xl hover:bg-white/20 transition-all"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="p-10 space-y-8">
-                <div className="grid grid-cols-2 gap-6">
+              <div className="p-8 space-y-8">
+                <div className="grid grid-cols-2 gap-8">
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Global Order ID
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                      Order ID
                     </p>
-                    <p className="font-mono text-blue-600 font-bold truncate">
+                    <p className="font-mono text-blue-600 text-sm font-bold truncate">
                       {selectedOrder._id}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Service Class
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                      Service Type
                     </p>
-                    <p className="font-bold text-slate-800 uppercase italic">
+                    <p className="font-bold text-slate-800 uppercase text-sm">
                       {selectedOrder.serviceType}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Logistics Mode
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                      Delivery Mode
                     </p>
-                    <p className="font-bold text-slate-800 uppercase">
+                    <p className="font-bold text-slate-800 uppercase text-sm">
                       {selectedOrder.deliveryMode}
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      Total Settle
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
+                      Grand Total
                     </p>
-                    <p className="font-black text-xl text-blue-600">
+                    <p className="font-bold text-2xl text-slate-900">
                       ₹{selectedOrder.totalAmount}
                     </p>
                   </div>
@@ -632,69 +633,65 @@ export default function UserDashboard() {
             className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
           >
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-white w-full max-w-[400px] overflow-hidden rounded-2xl shadow-2xl relative flex flex-col"
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white w-full max-w-[400px] overflow-hidden rounded-2xl shadow-2xl relative flex flex-col border border-slate-200"
             >
               {/* Header */}
-              <div className="bg-[#2b84ea] p-6 text-white flex justify-between items-center">
+              <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
                 <div>
-                  <h3 className="font-bold text-lg">Jumbo Xerox</h3>
-                  <p className="text-xs opacity-90">Test Mode Payment</p>
+                  <h3 className="font-bold text-lg tracking-tight">Jumbo Xerox</h3>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Test Payment Gateway</p>
                 </div>
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <Store size={20} />
+                <div className="bg-blue-600/20 p-2 rounded-lg">
+                  <Store size={18} className="text-blue-400" />
                 </div>
               </div>
 
               {/* Body */}
               <div className="p-8 space-y-6">
                 <div className="text-center">
-                  <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">
-                    Payable Amount
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">
+                    Amount to Pay
                   </p>
-                  <h2 className="text-4xl font-black text-gray-900">
+                  <h2 className="text-4xl font-bold text-slate-900">
                     ₹{mockOrderData?.order?.totalAmount || mockOrderData?.amount || "0.00"}
                   </h2>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-3">
-                  <div className="bg-blue-500 text-white p-1 rounded-full mt-0.5">
-                    <CheckCircle2 size={12} />
-                  </div>
+                <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl flex items-start gap-3">
+                  <CheckCircle2 size={16} className="text-blue-600 mt-0.5" />
                   <div>
-                    <h5 className="font-bold text-sm text-blue-900">
-                      Development Mode
+                    <h5 className="font-bold text-sm text-blue-900 uppercase tracking-tight">
+                      Sandbox Mode
                     </h5>
-                    <p className="text-xs text-blue-700 leading-relaxed mt-1">
-                      This is a simulated transaction. No actual money will be
-                      deducted.
+                    <p className="text-xs text-blue-700/80 leading-relaxed mt-1 font-medium">
+                      Simulated transaction. No funds will be moved.
                     </p>
                   </div>
                 </div>
 
-                <div className="space-y-3 pt-4">
+                <div className="space-y-3 pt-2">
                   <button
                     onClick={() => handleMockPaymentAction(true)}
-                    className="w-full py-4 bg-[#2b84ea] hover:bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex justify-center items-center gap-2"
+                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-[11px] tracking-wider"
                   >
-                    Success <ChevronRight size={16} />
+                    Simulate Success <ChevronRight size={16} />
                   </button>
                   <button
                     onClick={() => handleMockPaymentAction(false)}
-                    className="w-full py-4 bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-600 font-bold rounded-xl transition-all active:scale-95"
+                    className="w-full py-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold rounded-xl transition-all active:scale-95 uppercase text-[11px] tracking-wider"
                   >
-                    Cancel Transaction
+                    Cancel
                   </button>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="bg-gray-50 p-3 text-center border-t border-gray-100">
-                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1">
-                  <CreditCard size={12} /> 100% Secure (Mock)
+              <div className="bg-slate-50 p-4 text-center border-t border-slate-100">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5">
+                  <CreditCard size={12} /> Encrypted Transaction (Mock)
                 </p>
               </div>
             </motion.div>
@@ -709,19 +706,19 @@ export default function UserDashboard() {
 const StatCard = ({ label, value, icon, color, theme }) => (
   <motion.div
     variants={scaleIn}
-    whileHover={{ y: -5 }}
-    className={`${theme === "dark" ? "bg-white/5 border-white/10" : "bg-white border-slate-200"} p-10 rounded-[3rem] border shadow-xl flex items-center justify-between`}
+    whileHover={{ y: -4 }}
+    className={`${theme === "dark" ? "bg-white/5 border-white/10" : "bg-white border-slate-200"} p-8 rounded-2xl border shadow-md flex items-center justify-between transition-all`}
   >
     <div>
-      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+      <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-1">
         {label}
       </p>
-      <h3 className="text-5xl font-black mt-2 tracking-tighter italic">
+      <h3 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
         {value}
       </h3>
     </div>
-    <div className={`${color} bg-current/10 p-6 rounded-[2.2rem]`}>
-      {React.cloneElement(icon, { size: 40 })}
+    <div className={`${color} bg-current/10 p-4 rounded-xl`}>
+      {React.cloneElement(icon, { size: 28 })}
     </div>
   </motion.div>
 );
@@ -729,23 +726,23 @@ const StatCard = ({ label, value, icon, color, theme }) => (
 const ServiceCard = ({ title, img, link }) => (
   <motion.div 
     variants={scaleIn}
-    className="bg-white rounded-[3rem] shadow-2xl overflow-hidden group border border-slate-100 hover:translate-y-[-10px] transition-all duration-500"
+    className="bg-white rounded-2xl shadow-lg overflow-hidden group border border-slate-100 ring-1 ring-slate-200/50"
   >
-    <div className="h-80 overflow-hidden relative">
+    <div className="h-48 overflow-hidden relative">
       <img
         src={img}
         alt={title}
-        className="w-full h-full object-cover group-hover:scale-110 transition duration-700"
+        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
       />
-      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all duration-500" />
+      <div className="absolute inset-0 bg-slate-900/20 group-hover:bg-slate-900/10 transition-all duration-300" />
     </div>
-    <div className="p-10 flex flex-col items-center">
-      <h4 className="font-black text-2xl text-slate-800 mb-6 uppercase tracking-tighter italic">
+    <div className="p-8 flex flex-col items-center">
+      <h4 className="font-bold text-xl text-slate-800 mb-6 uppercase tracking-tight">
         {title}
       </h4>
       <Link
         to={link}
-        className="w-full py-5 bg-blue-600 text-white text-center rounded-[2.2rem] font-black shadow-xl hover:bg-black transition-all uppercase text-xs tracking-[0.2em]"
+        className="w-full py-4 bg-blue-600 text-white text-center rounded-xl font-bold shadow-md hover:bg-blue-700 transition-all uppercase text-[11px] tracking-wider"
       >
         Start Project
       </Link>
@@ -755,21 +752,24 @@ const ServiceCard = ({ title, img, link }) => (
 
 const NoteBox = ({ icon, title, desc, color }) => {
   const colors = {
-    blue: "bg-blue-100 border-blue-500 text-blue-900",
-    yellow: "bg-orange-100 border-orange-500 text-orange-900",
-    green: "bg-emerald-100 border-emerald-500 text-emerald-900",
+    blue: "bg-blue-50/50 border-blue-500 text-blue-900",
+    yellow: "bg-amber-50/50 border-amber-500 text-amber-900",
+    green: "bg-emerald-50/50 border-emerald-500 text-emerald-900",
   };
   return (
     <motion.div
       variants={scaleIn}
-      className={`${colors[color]} p-10 rounded-[2.8rem] border-l-[12px] shadow-lg`}
+      className={`${colors[color]} p-6 rounded-2xl border-l-4 shadow-sm flex items-start gap-4 transition-all hover:shadow-md`}
     >
-      <div className="flex items-center gap-4 mb-3 font-black uppercase text-[10px] tracking-widest">
-        <span className="p-2 bg-white/50 rounded-lg">{icon}</span> {title}
+      <div className="p-2 bg-white/80 rounded-lg shadow-sm">
+        {React.cloneElement(icon, { size: 18 })}
       </div>
-      <p className="text-[11px] font-black uppercase tracking-tight italic opacity-70">
-        {desc}
-      </p>
+      <div>
+        <h4 className="font-bold uppercase text-[10px] tracking-widest mb-1 opacity-80">{title}</h4>
+        <p className="text-sm font-bold tracking-tight">
+          {desc}
+        </p>
+      </div>
     </motion.div>
   );
 };
