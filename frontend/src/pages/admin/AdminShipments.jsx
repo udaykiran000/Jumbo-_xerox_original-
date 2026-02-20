@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { fadeInUp } from "../../components/common/Animations";
 import {
   Truck,
   Package,
@@ -23,6 +24,9 @@ export default function AdminShipments() {
   const [loading, setLoading] = useState(true);
   const [selectedShipment, setSelectedShipment] = useState(null);
   const [trackingData, setTrackingData] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [stats, setStats] = useState({ totalOrders: 0 });
 
   // Fetch Tracking Data when shipment is selected
   useEffect(() => {
@@ -44,19 +48,17 @@ export default function AdminShipments() {
   }, [selectedShipment]);
 
   useEffect(() => {
-    fetchShipmentOrders();
-  }, []);
+    fetchShipmentOrders(currentPage);
+  }, [currentPage]);
 
-  const fetchShipmentOrders = async () => {
-
+  const fetchShipmentOrders = async (page = 1) => {
     try {
-      const { data } = await api.get("/admin/orders");
-      // Filter orders that are either Paid or marked for Delivery
-      setOrders(
-        data.orders.filter(
-          (o) => o.deliveryMode === "Delivery"
-        )
-      );
+      setLoading(true);
+      const { data } = await api.get(`/admin/orders?deliveryMode=Delivery&page=${page}&limit=10`);
+      setOrders(data.orders || []);
+      setTotalPages(data.totalPages || 1);
+      setCurrentPage(data.currentPage || 1);
+      setStats({ totalOrders: data.totalOrders }); // Store total count for "Pending" stat
     } catch (e) {
       toast.error("Shipment data load failed");
     } finally {
@@ -65,7 +67,12 @@ export default function AdminShipments() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 font-sans">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={fadeInUp}
+      className="space-y-6 font-sans"
+    >
       {/* 1. STATS SECTION */}
       <div className="flex flex-col lg:flex-row justify-between items-start gap-6">
         <div>
@@ -83,7 +90,7 @@ export default function AdminShipments() {
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 Total Orders
               </p>
-              <h3 className="text-xl font-bold text-slate-900 mt-1">{orders.length}</h3>
+              <h3 className="text-xl font-bold text-slate-900 mt-1">{stats.totalOrders}</h3>
             </div>
             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
               <Package size={20} />
@@ -94,7 +101,7 @@ export default function AdminShipments() {
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 Shipped
               </p>
-              <h3 className="text-xl font-bold text-slate-900 mt-1">0</h3>
+              <h3 className="text-xl font-bold text-slate-900 mt-1">–</h3>
             </div>
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
               <CheckCircle2 size={20} />
@@ -105,7 +112,7 @@ export default function AdminShipments() {
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 Pending
               </p>
-              <h3 className="text-xl font-bold text-slate-900 mt-1">{orders.length}</h3>
+              <h3 className="text-xl font-bold text-slate-900 mt-1">{stats.totalOrders}</h3>
             </div>
             <div className="p-2 bg-orange-50 text-orange-600 rounded-lg">
               <Clock size={20} />
@@ -140,8 +147,14 @@ export default function AdminShipments() {
                 <tr>
                   <td colSpan="7" className="p-12 text-center text-slate-500">
                     <Loader2 className="animate-spin mx-auto mb-2" size={20}/>
-                    Syncing shipments...
+                    Loading shipments...
                   </td>
+                </tr>
+              ) : orders.length === 0 ? (
+                <tr>
+                    <td colSpan="7" className="p-12 text-center text-slate-500">
+                        No delivery orders found.
+                    </td>
                 </tr>
               ) : (
                 orders.map((o) => (
@@ -201,6 +214,29 @@ export default function AdminShipments() {
               )}
             </tbody>
           </table>
+        </div>
+        
+         {/* PAGINATION */}
+        <div className="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50">
+          <p className="text-xs text-slate-500 font-medium">
+            Page <span className="font-bold text-slate-900">{currentPage}</span> of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="p-1.5 bg-white border border-gray-300 rounded-md text-slate-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1.5 bg-white border border-gray-300 rounded-md text-slate-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -362,6 +398,6 @@ export default function AdminShipments() {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

@@ -282,7 +282,12 @@ const Checkout = () => {
     );
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-10 font-sans pb-32 text-slate-700 animate-in fade-in duration-700 text-left">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.7 }}
+      className="max-w-7xl mx-auto p-4 md:p-10 font-sans pb-32 text-slate-700 text-left"
+    >
       <div className="text-center mb-16">
         <p className="text-[10px] font-black text-blue-600 uppercase tracking-[0.4em] mb-2">
           Finalization
@@ -693,7 +698,7 @@ const Checkout = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };
 
@@ -769,7 +774,12 @@ const PaymentOption = ({ active, onClick, icon, title, desc }) => (
       className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${active ? "border-blue-600 bg-white" : "border-gray-200"}`}
     >
       {active && (
-        <div className="w-3 h-3 bg-blue-600 rounded-full animate-in zoom-in duration-300" />
+        <motion.div 
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="w-3 h-3 bg-blue-600 rounded-full" 
+        />
       )}
     </div>
   </div>

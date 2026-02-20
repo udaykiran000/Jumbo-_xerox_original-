@@ -169,12 +169,7 @@ export default function AdminUsers() {
                 <th className="px-6 py-3 text-center">Actions</th>
               </tr>
             </thead>
-            <motion.tbody 
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-              className="divide-y divide-gray-200 text-sm text-slate-700"
-            >
+            <tbody className="divide-y divide-gray-200 text-sm text-slate-700">
               {loading ? (
                 <tr>
                   <td
@@ -185,11 +180,16 @@ export default function AdminUsers() {
                     Loading directory...
                   </td>
                 </tr>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan="3" className="p-12 text-center text-slate-500">
+                    No customers found.
+                  </td>
+                </tr>
               ) : (
                 users.map((u) => (
-                  <motion.tr
+                  <tr
                     key={u._id}
-                    variants={slideInUp}
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-6 py-4">
@@ -232,10 +232,10 @@ export default function AdminUsers() {
                         </button>
                       </div>
                     </td>
-                  </motion.tr>
+                  </tr>
                 ))
               )}
-            </motion.tbody>
+            </tbody>
           </table>
         </div>
 

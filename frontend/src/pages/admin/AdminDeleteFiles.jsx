@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import { fadeInUp } from "../../components/common/Animations";
 import {
   Trash2,
   AlertTriangle,
@@ -12,12 +14,17 @@ import {
   Clock,
   Calendar,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export default function AdminDeleteFiles() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalFiles, setTotalFiles] = useState(0);
 
   // --- 1. CORE LOGIC: MULTI-TIMER ARCHITECTURE ---
   // timers: { [orderId]: secondsRemaining } for Visuals
@@ -26,12 +33,20 @@ export default function AdminDeleteFiles() {
   const timeouts = useRef({});
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(currentPage);
     // Cleanup on unmount: clear all pending timeouts
     return () => {
       Object.values(timeouts.current).forEach((id) => clearTimeout(id));
     };
-  }, []);
+  }, [currentPage]);
+
+  // Debounce Search
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchOrders(1);
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   // Global Visual Ticker: Decrements all active visual timers
   useEffect(() => {
@@ -53,11 +68,14 @@ export default function AdminDeleteFiles() {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = 1) => {
     try {
       setLoading(true);
-      const { data } = await api.get("/admin/orders-for-deletion");
+      const { data } = await api.get(`/admin/orders-for-deletion?page=${page}&limit=10&search=${searchTerm}`);
       setOrders(data.orders || []);
+      setTotalPages(data.totalPages || 1);
+      setCurrentPage(data.currentPage || 1);
+      setTotalFiles(data.totalOrders || 0);
     } catch (e) {
       toast.error("Failed to load storage data");
     } finally {
@@ -68,7 +86,7 @@ export default function AdminDeleteFiles() {
   const triggerDeletion = (id) => {
     // 1. Set Visual Timer
     setTimers((prev) => ({ ...prev, [id]: 7 }));
-    toast("Asset purge will execute in 7s...", { icon: "⏳" });
+    toast("Deletion scheduled in 7s...", { icon: "⏳" });
 
     // 2. Schedule Execution (Independent of Render Cycle)
     if (timeouts.current[id]) clearTimeout(timeouts.current[id]);
@@ -90,7 +108,7 @@ export default function AdminDeleteFiles() {
       delete next[id];
       return next;
     });
-    toast.success("Purge Cancelled", { icon: "🔄" });
+    toast.success("Deletion Cancelled", { icon: "🔄" });
   };
 
   const commitDeletion = async (id) => {
@@ -104,31 +122,28 @@ export default function AdminDeleteFiles() {
       delete timeouts.current[id];
 
       await api.delete(`/admin/order/files/${id}`);
-      toast.success("Disk storage cleared!");
-      fetchOrders();
+      toast.success("Files deleted successfully!");
+      fetchOrders(currentPage);
     } catch (e) {
-      toast.error(e.response?.data?.message || "File purge protocol failed");
+      toast.error(e.response?.data?.message || "Deletion failed");
     }
   };
 
-  // Micro-Logic: Filtering based on ID, Name or Payment Status
-  const filteredOrders = orders.filter(
-    (o) =>
-      o.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.paymentStatus?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o._id.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-20 font-sans">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={fadeInUp}
+      className="space-y-6 pb-20 font-sans"
+    >
       {/* HEADER & SEARCH BAR */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-             File Management
+             File Storage
            </h1>
            <p className="text-sm text-slate-500 mt-1">
-             Manage and purge temporary files to save space.
+             Manage temporary files and disk usage.
            </p>
         </div>
 
@@ -139,8 +154,8 @@ export default function AdminDeleteFiles() {
           />
           <input
             type="text"
-            placeholder="Search files..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-red-500 outline-none shadow-sm"
+            placeholder="Search by ID or Name..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none shadow-sm transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -153,11 +168,11 @@ export default function AdminDeleteFiles() {
           <div className="flex items-center gap-2">
             <Trash2 className="text-white" size={18} />
             <h3 className="text-white font-bold text-base">
-              Purge Queue
+              Cleanup List
             </h3>
           </div>
           <span className="text-xs font-medium text-slate-300 bg-white/10 px-3 py-1 rounded-full">
-            Total: {filteredOrders.length}
+            Total: {totalFiles}
           </span>
         </div>
 
@@ -177,11 +192,17 @@ export default function AdminDeleteFiles() {
                 <tr>
                    <td colSpan="5" className="p-12 text-center text-slate-500">
                     <Loader2 className="animate-spin mx-auto mb-2" size={20}/>
-                    Syncing storage state...
+                    Loading data...
                   </td>
                 </tr>
+              ) : orders.length === 0 ? (
+                <tr>
+                    <td colSpan="5" className="p-12 text-center text-slate-500">
+                        No orders found.
+                    </td>
+                </tr>
               ) : (
-                filteredOrders.map((o) => {
+                orders.map((o) => {
                   const daysOld = Math.floor(
                     (new Date() - new Date(o.createdAt)) /
                       (1000 * 60 * 60 * 24),
@@ -225,7 +246,7 @@ export default function AdminDeleteFiles() {
                         <div className="flex items-center justify-center gap-1.5 bg-slate-50 text-slate-600 py-1.5 px-3 rounded-lg border border-slate-200 w-fit mx-auto">
                           <FileText size={12} />
                           <span className="text-[11px] font-medium">
-                            {o.files.length} Files
+                            {o.files?.length || 0} Files
                           </span>
                         </div>
                       </td>
@@ -233,7 +254,7 @@ export default function AdminDeleteFiles() {
                         <div className="flex justify-center items-center">
                           {o.filesDeleted ? (
                             <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
-                              <CheckCircle2 size={14} /> Purged
+                              <CheckCircle2 size={14} /> Deleted
                             </span>
                           ) : isCounting ? (
                             <button
@@ -259,6 +280,29 @@ export default function AdminDeleteFiles() {
             </tbody>
           </table>
         </div>
+        
+         {/* PAGINATION */}
+        <div className="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50">
+          <p className="text-xs text-slate-500 font-medium">
+            Page <span className="font-bold text-slate-900">{currentPage}</span> of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="p-1.5 bg-white border border-gray-300 rounded-md text-slate-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1.5 bg-white border border-gray-300 rounded-md text-slate-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* SYSTEM SECURITY NOTICE */}
@@ -266,15 +310,14 @@ export default function AdminDeleteFiles() {
         <AlertCircle className="text-orange-600 shrink-0 mt-0.5" size={24} />
         <div className="space-y-1">
           <p className="text-sm font-bold text-orange-800">
-            Autonomous Purge Protocol
+            Data Retention Policy
           </p>
           <p className="text-xs text-orange-700 leading-relaxed">
-            Integrity Notice: Manual purging permanently removes PDF/Asset
-            streams from the server. User details, price settlements, and
-            service logs are strictly preserved for audit trails.
+            Manual deletion permanently removes file assets from the server. 
+            Order details and transaction logs are preserved for audit purposes.
           </p>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

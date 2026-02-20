@@ -20,6 +20,8 @@ import {
   Hash,
   ChevronDown,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { fetchDashboardStats } from "../../redux/slices/dashboardSlice";
@@ -30,6 +32,8 @@ const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [fileStatus, setFileStatus] = useState(null);
 
@@ -45,11 +49,19 @@ const AdminOrders = () => {
   const API_BASE_URL = rawUrl.endsWith("/api") ? rawUrl.replace("/api", "") : rawUrl;
 
   useEffect(() => {
-    fetchOrders();
+    fetchOrders(currentPage);
     return () => {
       Object.values(timeouts.current).forEach((id) => clearTimeout(id));
     };
-  }, []);
+  }, [currentPage]);
+
+  // Debounce Search
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchOrders(1);
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   useEffect(() => {
     if (orders.length > 0 && state?.openOrderId) {
@@ -92,11 +104,13 @@ const AdminOrders = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = 1) => {
     try {
       setLoading(true);
-      const { data } = await api.get("/admin/orders");
+      const { data } = await api.get(`/admin/orders?page=${page}&limit=10&search=${searchTerm}`);
       setOrders(data.orders || []);
+      setTotalPages(data.totalPages || 1);
+      setCurrentPage(data.currentPage || 1);
     } catch (e) {
       toast.error("Failed to fetch orders");
     } finally {
@@ -152,7 +166,7 @@ const AdminOrders = () => {
 
       await api.put(`/admin/order/${id}`, { status });
       toast.success(`Order status updated to ${status}`);
-      fetchOrders();
+      fetchOrders(currentPage);
       dispatch(fetchDashboardStats());
     } catch (e) {
       toast.error(e.response?.data?.message || "Update failed");
@@ -178,13 +192,6 @@ const AdminOrders = () => {
       toast.error("ZIP Generation Failed");
     }
   };
-
-  const filteredOrders = orders.filter(
-    (o) =>
-      (o.user?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (o.user?.phone || "").includes(searchTerm) ||
-      o._id.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -248,14 +255,20 @@ const AdminOrders = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {filteredOrders.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500 text-sm">
+                     Loading orders...
+                  </td>
+                </tr>
+              ) : orders.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-12 text-center text-slate-500 text-sm">
                     No orders found matching your search.
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((o) => {
+                orders.map((o) => {
                   const isLocked =
                     o.status === "Completed" ||
                     o.status === "Cancelled" ||
@@ -360,6 +373,29 @@ const AdminOrders = () => {
               )}
             </tbody>
           </table>
+        </div>
+        
+        {/* PAGINATION */}
+        <div className="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50">
+          <p className="text-xs text-slate-500 font-medium">
+            Page <span className="font-bold text-slate-900">{currentPage}</span> of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="p-1.5 bg-white border border-gray-300 rounded-md text-slate-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1.5 bg-white border border-gray-300 rounded-md text-slate-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
 

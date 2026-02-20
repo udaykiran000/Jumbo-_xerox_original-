@@ -10,56 +10,92 @@ const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcryptjs");
 
-// HELPER: Folder size calculation for Disk Stats (Original Integrity)
-const getDirSize = (dirPath) => {
+// HELPER: Async Folder size calculation (Non-blocking)
+const getDirSizeAsync = async (dirPath) => {
   let size = 0;
-  if (fs.existsSync(dirPath)) {
-    const files = fs.readdirSync(dirPath);
-    files.forEach((file) => {
+  try {
+    await fs.promises.access(dirPath);
+    const files = await fs.promises.readdir(dirPath);
+    
+    await Promise.all(files.map(async (file) => {
       const filePath = path.join(dirPath, file);
       try {
-        const stats = fs.statSync(filePath);
-        if (stats.isDirectory()) size += getDirSize(filePath);
-        else size += stats.size;
-      } catch (err) {}
-    });
+        const stats = await fs.promises.stat(filePath);
+        if (stats.isDirectory()) {
+          size += await getDirSizeAsync(filePath);
+        } else {
+          size += stats.size;
+        }
+      } catch (e) {
+        // Ignore individual file errors
+      }
+    }));
+  } catch (err) {
+    // Directory might not exist or access denied
   }
   return size;
 };
 
-// 1. DASHBOARD STATS (Integrity: Full Stats + Activity + Disk)
+// 1. DASHBOARD STATS (Optimized: Parallel Queries + Async Disk I/O)
 exports.getAdminStats = async (req, res) => {
-
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const totalUsers = await User.countDocuments();
-    const todayReg = await User.countDocuments({ createdAt: { $gte: today } });
-    const todayOrdersCount = await Order.countDocuments({
-      createdAt: { $gte: today },
-    });
-    const processingOrders = await Order.countDocuments({
-      status: "Processing",
-    });
-
-    const todayRevData = await Order.aggregate([
-      { $match: { paymentStatus: "Paid", createdAt: { $gte: today } } },
-      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+    // parallelize all independent DB queries
+    const [
+      totalUsers,
+      todayReg,
+      todayOrdersCount,
+      processingOrders,
+      todayRevData,
+      totalRevData,
+      recentOrders,
+      recentUsers,
+      space,
+      pendingOrders,
+      unreadMessages,
+      pendingShipments,
+      fileCleanup
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ createdAt: { $gte: today } }),
+      Order.countDocuments({ createdAt: { $gte: today } }),
+      Order.countDocuments({ status: "Processing" }),
+      Order.aggregate([
+        { $match: { paymentStatus: "Paid", createdAt: { $gte: today } } },
+        { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+      ]),
+      Order.aggregate([
+        { $match: { paymentStatus: "Paid" } },
+        { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+      ]),
+      Order.find().sort({ createdAt: -1 }).limit(5).populate("user", "name email"),
+      User.find().sort({ createdAt: -1 }).limit(5),
+      checkDiskSpace(process.cwd()),
+      Order.countDocuments({ status: "Pending" }),
+      Contact.countDocuments({ isRead: false }),
+      Order.countDocuments({
+        paymentStatus: "Paid",
+        status: "Completed",
+        deliveryMode: "Delivery",
+        $or: [{ shipmentId: null }, { shipmentId: "" }],
+      }),
+      Order.countDocuments({
+        status: { $in: ["Completed", "Cancelled"] },
+        filesDeleted: { $ne: true },
+      })
     ]);
+
+    // Dependent/Specific queries that were part of the response construction
+    const [completedToday, pendingToday] = await Promise.all([
+        Order.countDocuments({ createdAt: { $gte: today }, status: "Completed" }),
+        Order.countDocuments({ createdAt: { $gte: today }, status: "Pending" })
+    ]);
+
     const todayRev = todayRevData[0]?.total || 0;
-
-    const totalRevData = await Order.aggregate([
-      { $match: { paymentStatus: "Paid" } },
-      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
-    ]);
     const totalRev = totalRevData[0]?.total || 0;
 
-    const recentOrders = await Order.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate("user", "name email");
-    const recentUsers = await User.find().sort({ createdAt: -1 }).limit(5);
     const combinedActivity = [
       ...recentOrders.map((o) => ({
         type: "order",
@@ -82,7 +118,7 @@ exports.getAdminStats = async (req, res) => {
       .slice(0, 8);
 
     const uploadsPath = path.join(process.cwd(), "uploads", "files");
-    const space = await checkDiskSpace(process.cwd());
+    const uploadsSize = await getDirSizeAsync(uploadsPath);
 
     const responsePayload = {
       totalUsers,
@@ -90,43 +126,27 @@ exports.getAdminStats = async (req, res) => {
       processing: processingOrders,
       todayOrders: {
         total: todayOrdersCount,
-        completed: await Order.countDocuments({
-          createdAt: { $gte: today },
-          status: "Completed",
-        }),
-        pending: await Order.countDocuments({
-          createdAt: { $gte: today },
-          status: "Pending",
-        }),
+        completed: completedToday,
+        pending: pendingToday,
       },
       notifications: {
-        pendingOrders: await Order.countDocuments({ status: "Pending" }),
-        unreadMessages: await Contact.countDocuments({ isRead: false }),
-        pendingShipments: await Order.countDocuments({
-          paymentStatus: "Paid",
-          status: "Completed",
-          deliveryMode: "Delivery",
-          $or: [{ shipmentId: null }, { shipmentId: "" }],
-        }),
-        fileCleanup: await Order.countDocuments({
-          status: { $in: ["Completed", "Cancelled"] },
-          filesDeleted: { $ne: true },
-        }),
+        pendingOrders,
+        unreadMessages,
+        pendingShipments,
+        fileCleanup,
       },
       todayRev,
       totalRev,
       disk: {
         free: (space.free / 1e9).toFixed(2) + " GB",
-        uploadsSize: (getDirSize(uploadsPath) / 1e6).toFixed(2) + " MB",
+        uploadsSize: (uploadsSize / 1e6).toFixed(2) + " MB",
         isLowSpace: space.free / space.size < 0.2,
       },
       recentActivity: combinedActivity,
     };
 
-
     res.json(responsePayload);
   } catch (error) {
-    console.error("[DEBUG-ERR] Stats Logic Failed:", error.message);
     res.status(500).json({ message: error.message });
   }
 };
@@ -198,33 +218,118 @@ exports.toggleUserStatus = async (req, res) => {
 // 3. ORDER MANAGEMENT: Upgraded Filtering & Security
 exports.getAllOrders = async (req, res) => {
   try {
-    console.log("[DEBUG] Fetching All Orders...");
-    const allOrdersCount = await Order.countDocuments({});
-    console.log(`[DEBUG] Total Orders in DB: ${allOrdersCount}`);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    const orders = await Order.find({ paymentStatus: "Paid" })
+    const { status, paymentStatus, deliveryMode, search } = req.query;
+
+    let query = {};
+
+    if (status) query.status = status;
+    if (paymentStatus) query.paymentStatus = paymentStatus;
+    if (deliveryMode) query.deliveryMode = deliveryMode;
+
+    if (search) {
+      if (mongoose.isValidObjectId(search)) {
+        query._id = search;
+      } else {
+        // Search in user details (needs join) or rough regex
+        // Since we are querying Order, we can't easily regex search user fields without aggregate
+        // For MVP, we'll assume search is mostly for Order ID or if we populate first (expensive)
+        // Better approach: Find users first, then find orders for those users
+        const users = await User.find({
+            $or: [
+                { name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+                { phone: { $regex: search, $options: "i" } }
+            ]
+        }).select('_id');
+        
+        const userIds = users.map(u => u._id);
+        
+        if (userIds.length > 0) {
+             query.$or = [
+                { user: { $in: userIds } },
+                { _id: mongoose.isValidObjectId(search) ? search : null }
+             ];
+             // Clean up nulls
+             query.$or = query.$or.filter(c => c._id !== null || c.user);
+        } else if (mongoose.isValidObjectId(search)) {
+            query._id = search;
+        }
+      }
+    }
+
+    const totalOrders = await Order.countDocuments(query);
+    const orders = await Order.find(query)
       .populate("user", "name email phone")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    console.log(`[DEBUG] Paid Orders Found: ${orders.length}`);
-
-    res.json({ orders });
+    res.json({
+      orders,
+      totalPages: Math.ceil(totalOrders / limit),
+      currentPage: page,
+      totalOrders,
+    });
   } catch (error) {
+    console.error("Order Fetch Error:", error);
     res.status(500).json({ message: "Cloud sync failed" });
   }
 };
 
 exports.getOrdersForDeletion = async (req, res) => {
   try {
-    const orders = await Order.find({
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const search = req.query.search || "";
+
+    let query = {
       $or: [
         { paymentStatus: "Pending" },
         { status: { $in: ["Completed", "Cancelled"] } },
       ],
-    })
+    };
+
+    if (search) {
+        // Similar search logic as above or simplified for Deletion page
+         const users = await User.find({
+            $or: [
+                { name: { $regex: search, $options: "i" } }
+            ]
+        }).select('_id');
+        const userIds = users.map(u => u._id);
+
+        const searchQuery = [];
+        if(userIds.length > 0) searchQuery.push({ user: { $in: userIds } });
+        if(mongoose.isValidObjectId(search)) searchQuery.push({ _id: search });
+        
+        if(searchQuery.length > 0) {
+            query = {
+                $and: [
+                    query,
+                    { $or: searchQuery }
+                ]
+            }
+        }
+    }
+
+    const totalOrders = await Order.countDocuments(query);
+    const orders = await Order.find(query)
       .populate("user", "name email phone")
-      .sort({ updatedAt: -1 });
-    res.json({ orders });
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+        orders,
+        totalPages: Math.ceil(totalOrders / limit),
+        currentPage: page,
+        totalOrders,
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch storage data" });
   }
@@ -416,7 +521,27 @@ exports.createPublicContact = async (req, res) => {
 
 exports.getContactMessages = async (req, res) => {
   try {
-    res.json(await Contact.find().sort({ createdAt: -1 }));
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalMessages = await Contact.countDocuments();
+    const unreadMessages = await Contact.countDocuments({ isRead: false });
+    const readMessages = await Contact.countDocuments({ isRead: true });
+
+    const messages = await Contact.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+        
+    res.json({
+        messages,
+        totalPages: Math.ceil(totalMessages / limit),
+        currentPage: page,
+        totalMessages,
+        unreadMessages,
+        readMessages
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

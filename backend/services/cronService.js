@@ -42,7 +42,6 @@ const performCleanup = async () => {
     });
 
     for (const order of abandonedOrders) {
-      console.log(`🔎 [STORAGE] Found unpaid stale order: ${order._id}`);
       for (const file of order.files) {
         const filePath = path.join(FILES_BASE, path.basename(file.url));
         if (fsSync.existsSync(filePath)) {

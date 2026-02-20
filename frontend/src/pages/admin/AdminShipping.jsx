@@ -13,6 +13,8 @@ import {
   Clock,
 } from "lucide-react";
 
+import { fadeInUp } from "../../components/common/Animations";
+
 export default function AdminShipping() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,12 @@ export default function AdminShipping() {
     );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-20 font-sans">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={fadeInUp}
+      className="space-y-6 pb-20 font-sans"
+    >
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
@@ -168,6 +175,6 @@ export default function AdminShipping() {
           </table>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

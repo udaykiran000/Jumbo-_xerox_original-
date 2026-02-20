@@ -73,7 +73,6 @@ export default function AdminSettings() {
         confirmPassword: "",
       });
     } catch (error) {
-      console.error("[DEBUG-UI-ERR] Password update failed:", error);
       toast.error(
         error.response?.data?.message || "Current password verification failed",
       );

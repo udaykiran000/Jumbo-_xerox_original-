@@ -45,7 +45,6 @@ export default function Navbar() {
   };
 
   const handleLogout = () => {
-    console.log("[DEBUG-AUTH] User Logging out from Navbar...");
     dispatch(logout());
     setIsOpen(false);
     navigate("/");
@@ -202,7 +201,12 @@ export default function Navbar() {
 
       {/* Mobile Menu Drawer */}
       {isOpen && (
-        <div className="md:hidden bg-white border-b border-slate-100 p-6 space-y-3 shadow-2xl animate-in slide-in-from-top duration-300">
+        <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="md:hidden bg-white border-b border-slate-100 p-6 space-y-3 shadow-2xl"
+        >
           <NavLink
             to="/"
             onClick={() => setIsOpen(false)}
@@ -282,7 +286,7 @@ export default function Navbar() {
               </Link>
             </div>
           )}
-        </div>
+        </motion.div>
       )}
     </nav>
   );

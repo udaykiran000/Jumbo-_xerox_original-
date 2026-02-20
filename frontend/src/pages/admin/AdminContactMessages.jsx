@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import { fadeInUp } from "../../components/common/Animations";
 import {
   MessageSquare,
   Mail,
@@ -12,26 +14,34 @@ import {
   Clock,
   Search,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export default function AdminContactMessages() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    fetchMessages();
-  }, []);
+    fetchMessages(currentPage);
+  }, [currentPage]);
 
-  const fetchMessages = async () => {
-
+  const fetchMessages = async (page = 1) => {
     try {
-      const { data } = await api.get("/admin/messages");
-      setMessages(data);
+      setLoading(true);
+      const { data } = await api.get(`/admin/messages?page=${page}&limit=10`);
+      setMessages(data.messages || []);
+      setTotalPages(data.totalPages || 1);
+      setCurrentPage(data.currentPage || 1);
+      
+      // Update stats from backend response
       setStats({
-        total: data.length,
-        unread: data.filter((m) => !m.isRead).length,
-        read: data.filter((m) => m.isRead).length,
+        total: data.totalMessages || 0,
+        unread: data.unreadMessages || 0,
+        read: data.readMessages || 0,
       });
     } catch (e) {
       toast.error("Messages load failed");
@@ -43,15 +53,21 @@ export default function AdminContactMessages() {
   const markAsRead = async (id) => {
     try {
       await api.patch(`/admin/messages/${id}/read`);
-      toast.success("Message marked as read");
-      fetchMessages();
+      toast.success("Marked as read");
+      // Refresh current page to update list and stats
+      fetchMessages(currentPage);
     } catch (e) {
       toast.error("Update failed");
     }
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 font-sans pb-20">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={fadeInUp}
+      className="space-y-6 font-sans pb-20"
+    >
       {/* 1. HEADER & STATS */}
       <div className="flex flex-col lg:flex-row justify-between items-start gap-6">
         <div>
@@ -114,7 +130,7 @@ export default function AdminContactMessages() {
         <div className="p-6">
           {loading ? (
             <div className="flex justify-center p-12 text-slate-400 font-medium">
-              <Loader2 className="animate-spin mr-2" /> Syncing inbox...
+              <Loader2 className="animate-spin mr-2" /> Loading messages...
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
@@ -191,7 +207,30 @@ export default function AdminContactMessages() {
             </div>
           )}
         </div>
+        
+         {/* PAGINATION */}
+        <div className="px-6 py-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50">
+          <p className="text-xs text-slate-500 font-medium">
+            Page <span className="font-bold text-slate-900">{currentPage}</span> of {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="p-1.5 bg-white border border-gray-300 rounded-md text-slate-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1.5 bg-white border border-gray-300 rounded-md text-slate-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
